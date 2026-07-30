@@ -1,0 +1,81 @@
+.container {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+h1 {
+  margin: 0 0 1.25rem;
+}
+
+.add-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.add-form input {
+  flex: 1;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  cursor: pointer;
+  background: #1f6feb;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+button:disabled {
+  background: #8b949e;
+  cursor: not-allowed;
+}
+
+.todo-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+}
+
+.todo-item + .todo-item {
+  margin-top: 0.75rem;
+}
+
+.todo-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.completed {
+  text-decoration: line-through;
+  color: #656d76;
+}
+
+.danger {
+  background: #cf222e;
+}
+
+.status {
+  color: #656d76;
+}
+
+.error {
+  color: #cf222e;
+  font-weight: 600;
+}
