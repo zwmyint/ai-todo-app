@@ -3,6 +3,7 @@ import { db, DatabaseError } from "../db.js"
 import type {
   CreateTodoInput,
   ListTodosOptions,
+  ListTodosResult,
   Todo,
   TodoSortOption,
   UpdateTodoInput,
