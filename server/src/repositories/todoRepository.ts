@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto"
 import { db } from "../db.js"
-import type { CreateTodoInput, Todo, UpdateTodoInput } from "../types/todo.js"
+import type {
+  CreateTodoInput,
+  ListTodosOptions,
+  Todo,
+  TodoSortOption,
+  UpdateTodoInput,
+} from "../types/todo.js"
 
 interface TodoRow {
   id: string
@@ -8,6 +14,15 @@ interface TodoRow {
   completed: number
   created_at: string
   updated_at: string
+}
+
+const sortMapping: Record<TodoSortOption, string> = {
+  createdAt_desc: "datetime(created_at) DESC",
+  createdAt_asc: "datetime(created_at) ASC",
+  updatedAt_desc: "datetime(updated_at) DESC",
+  updatedAt_asc: "datetime(updated_at) ASC",
+  title_desc: "title COLLATE NOCASE DESC",
+  title_asc: "title COLLATE NOCASE ASC",
 }
 
 const toTodo = (row: TodoRow): Todo => ({
@@ -18,9 +33,40 @@ const toTodo = (row: TodoRow): Todo => ({
   updatedAt: row.updated_at,
 })
 
-export const listTodos = (): Todo[] => {
-  const stmt = db.prepare("SELECT * FROM todos ORDER BY datetime(created_at) DESC")
-  const rows = stmt.all() as TodoRow[]
+export const listTodos = (options?: ListTodosOptions): Todo[] => {
+  const clauses: string[] = []
+  const params: unknown[] = []
+
+  if (options?.completed !== undefined) {
+    clauses.push("completed = ?")
+    params.push(options.completed ? 1 : 0)
+  }
+
+  if (options?.search) {
+    clauses.push("LOWER(title) LIKE ?")
+    params.push(`%${options.search.toLowerCase()}%`)
+  }
+
+  let sql = "SELECT * FROM todos"
+  if (clauses.length > 0) {
+    sql += ` WHERE ${clauses.join(" AND ")}`
+  }
+
+  const orderBy = options?.sort ? sortMapping[options.sort] : sortMapping.createdAt_desc
+  sql += ` ORDER BY ${orderBy}`
+
+  if (options?.limit !== undefined) {
+    sql += " LIMIT ?"
+    params.push(options.limit)
+  }
+
+  if (options?.page !== undefined && options?.limit !== undefined) {
+    sql += " OFFSET ?"
+    params.push((options.page - 1) * options.limit)
+  }
+
+  const stmt = db.prepare(sql)
+  const rows = stmt.all(...params) as TodoRow[]
   return rows.map(toTodo)
 }
 

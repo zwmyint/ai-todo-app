@@ -1,6 +1,7 @@
 # To-Do List App (React + TypeScript + Express + SQLite)
 
 This project is a full-stack To-Do List application with:
+
 - `client/` — React + TypeScript UI (Vite)
 - `server/` — Node.js + Express API (TypeScript)
 - SQLite persistence for todos
@@ -77,31 +78,45 @@ Base URL: `http://localhost:4000`
    Health check.
 
 2. `GET /api/todos`  
-   Returns all todos.
+   Returns todos. Supports optional query filters:
+   - `completed=true|false`
+   - `search=term`
+   - `sort=createdAt_desc|createdAt_asc|updatedAt_desc|updatedAt_asc|title_desc|title_asc`
+   - `page=1&limit=20`
 
-3. `POST /api/todos`  
+3. `GET /api/todos/:id`  
+   Returns a single todo by ID.
+
+4. `POST /api/todos`  
    Creates a todo.
+
    ```json
    { "title": "Buy milk" }
    ```
 
-4. `PUT /api/todos/:id`  
-   Updates todo title and/or completion.
+5. `PUT /api/todos/:id`  
+   Updates a todo partially. The request body may include one or both fields:
+
    ```json
    { "completed": true }
    ```
 
-5. `DELETE /api/todos/:id`  
+6. `PATCH /api/todos/:id`  
+   Partially updates a todo using the same request body shape as `PUT`.
+
+7. `DELETE /api/todos/:id`  
    Deletes a todo.
+
+All successful responses return `{ data: ... }` and all validation or not-found errors return `{ error: ... }`.
 
 ## 7. Todo data model
 
 ```ts
 {
-  id: string
-  title: string
-  completed: boolean
-  createdAt: string
-  updatedAt: string
+  id: string;
+  title: string;
+  completed: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
