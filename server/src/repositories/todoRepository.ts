@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { db } from "../db.js"
+import { db, DatabaseError } from "../db.js"
 import type {
   CreateTodoInput,
   ListTodosOptions,
@@ -33,92 +33,106 @@ const toTodo = (row: TodoRow): Todo => ({
   updatedAt: row.updated_at,
 })
 
-export const listTodos = (options?: ListTodosOptions): Todo[] => {
-  const clauses: string[] = []
-  const params: unknown[] = []
-
-  if (options?.completed !== undefined) {
-    clauses.push("completed = ?")
-    params.push(options.completed ? 1 : 0)
-  }
-
-  if (options?.search) {
-    clauses.push("LOWER(title) LIKE ?")
-    params.push(`%${options.search.toLowerCase()}%`)
-  }
-
-  let sql = "SELECT * FROM todos"
-  if (clauses.length > 0) {
-    sql += ` WHERE ${clauses.join(" AND ")}`
-  }
-
-  const orderBy = options?.sort ? sortMapping[options.sort] : sortMapping.createdAt_desc
-  sql += ` ORDER BY ${orderBy}`
-
-  if (options?.limit !== undefined) {
-    sql += " LIMIT ?"
-    params.push(options.limit)
-  }
-
-  if (options?.page !== undefined && options?.limit !== undefined) {
-    sql += " OFFSET ?"
-    params.push((options.page - 1) * options.limit)
-  }
-
-  const stmt = db.prepare(sql)
-  const rows = stmt.all(...params) as TodoRow[]
-  return rows.map(toTodo)
-}
-
-export const createTodo = (input: CreateTodoInput): Todo => {
-  const now = new Date().toISOString()
-  const id = randomUUID()
-
-  const stmt = db.prepare(
-    "INSERT INTO todos (id, title, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-  )
-  stmt.run(id, input.title, 0, now, now)
-
-  return {
-    id,
-    title: input.title,
-    completed: false,
-    createdAt: now,
-    updatedAt: now,
+const runDatabaseOperation = <T>(operation: () => T): T => {
+  try {
+    return operation()
+  } catch (error) {
+    console.error("Database operation failed", error)
+    throw new DatabaseError("Database operation failed", error)
   }
 }
 
-export const findTodoById = (id: string): Todo | null => {
-  const stmt = db.prepare("SELECT * FROM todos WHERE id = ?")
-  const row = stmt.get(id) as TodoRow | undefined
-  return row ? toTodo(row) : null
-}
+export const listTodos = (options?: ListTodosOptions): Todo[] =>
+  runDatabaseOperation(() => {
+    const clauses: string[] = []
+    const params: unknown[] = []
 
-export const updateTodo = (id: string, input: UpdateTodoInput): Todo | null => {
-  const existing = findTodoById(id)
-  if (!existing) {
-    return null
-  }
+    if (options?.completed !== undefined) {
+      clauses.push("completed = ?")
+      params.push(options.completed ? 1 : 0)
+    }
 
-  const nextTitle = input.title ?? existing.title
-  const nextCompleted = input.completed ?? existing.completed
-  const now = new Date().toISOString()
+    if (options?.search) {
+      clauses.push("LOWER(title) LIKE ?")
+      params.push(`%${options.search.toLowerCase()}%`)
+    }
 
-  const stmt = db.prepare(
-    "UPDATE todos SET title = ?, completed = ?, updated_at = ? WHERE id = ?",
-  )
-  stmt.run(nextTitle, nextCompleted ? 1 : 0, now, id)
+    let sql = "SELECT * FROM todos"
+    if (clauses.length > 0) {
+      sql += ` WHERE ${clauses.join(" AND ")}`
+    }
 
-  return {
-    ...existing,
-    title: nextTitle,
-    completed: nextCompleted,
-    updatedAt: now,
-  }
-}
+    const orderBy = options?.sort ? sortMapping[options.sort] : sortMapping.createdAt_desc
+    sql += ` ORDER BY ${orderBy}`
 
-export const deleteTodo = (id: string): boolean => {
-  const stmt = db.prepare("DELETE FROM todos WHERE id = ?")
-  const result = stmt.run(id)
-  return result.changes > 0
-}
+    if (options?.limit !== undefined) {
+      sql += " LIMIT ?"
+      params.push(options.limit)
+    }
+
+    if (options?.page !== undefined && options?.limit !== undefined) {
+      sql += " OFFSET ?"
+      params.push((options.page - 1) * options.limit)
+    }
+
+    const stmt = db.prepare(sql)
+    const rows = stmt.all(...params) as TodoRow[]
+    return rows.map(toTodo)
+  })
+
+export const createTodo = (input: CreateTodoInput): Todo =>
+  runDatabaseOperation(() => {
+    const now = new Date().toISOString()
+    const id = randomUUID()
+
+    const stmt = db.prepare(
+      "INSERT INTO todos (id, title, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+    )
+    stmt.run(id, input.title, 0, now, now)
+
+    return {
+      id,
+      title: input.title,
+      completed: false,
+      createdAt: now,
+      updatedAt: now,
+    }
+  })
+
+export const findTodoById = (id: string): Todo | null =>
+  runDatabaseOperation(() => {
+    const stmt = db.prepare("SELECT * FROM todos WHERE id = ?")
+    const row = stmt.get(id) as TodoRow | undefined
+    return row ? toTodo(row) : null
+  })
+
+export const updateTodo = (id: string, input: UpdateTodoInput): Todo | null =>
+  runDatabaseOperation(() => {
+    const existing = findTodoById(id)
+    if (!existing) {
+      return null
+    }
+
+    const nextTitle = input.title ?? existing.title
+    const nextCompleted = input.completed ?? existing.completed
+    const now = new Date().toISOString()
+
+    const stmt = db.prepare(
+      "UPDATE todos SET title = ?, completed = ?, updated_at = ? WHERE id = ?",
+    )
+    stmt.run(nextTitle, nextCompleted ? 1 : 0, now, id)
+
+    return {
+      ...existing,
+      title: nextTitle,
+      completed: nextCompleted,
+      updatedAt: now,
+    }
+  })
+
+export const deleteTodo = (id: string): boolean =>
+  runDatabaseOperation(() => {
+    const stmt = db.prepare("DELETE FROM todos WHERE id = ?")
+    const result = stmt.run(id)
+    return result.changes > 0
+  })

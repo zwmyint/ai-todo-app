@@ -35,6 +35,15 @@ cp client/.env.example client/.env
 cp server/.env.example server/.env
 ```
 
+Then review the server env settings and update them for your local environment:
+
+```bash
+NODE_ENV=development
+PORT=4000
+CORS_ORIGIN=http://localhost:5173
+DB_PATH=./data/todos.db
+```
+
 ## 4. Run the app
 
 Start backend (Terminal 1):
