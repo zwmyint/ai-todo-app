@@ -20,10 +20,20 @@ const assertOk = async <T>(response: Response): Promise<T> => {
   return payload.data
 }
 
+export type TodoSortOption =
+  | "createdAt_desc"
+  | "createdAt_asc"
+  | "updatedAt_desc"
+  | "updatedAt_asc"
+  | "title_desc"
+  | "title_asc"
+  | "dueDate_asc"
+  | "dueDate_desc"
+
 export type ListOptions = {
   completed?: boolean
   search?: string
-  sort?: string
+  sort?: TodoSortOption | string
   page?: number
   limit?: number
 }

@@ -11,6 +11,7 @@ export default function History() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sort, setSort] = useState<string>("createdAt_desc")
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -21,7 +22,7 @@ export default function History() {
 
     void (async () => {
       try {
-        const res = await getTodos({ page, limit: PAGE_SIZE })
+        const res = await getTodos({ page, limit: PAGE_SIZE, sort })
         if (mounted) {
           if (Array.isArray(res)) {
             setItems(res)
@@ -41,7 +42,24 @@ export default function History() {
     return () => {
       mounted = false
     }
-  }, [page])
+  }, [page, sort])
+
+  const handleSort = (newSort: string) => {
+    if (newSort === sort) return
+    setSort(newSort)
+    setPage(1)
+  }
+
+  const renderSortHeader = (label: string, ascKey: string, descKey: string) => (
+    <th>
+      <button type="button" onClick={() => handleSort(ascKey)} aria-pressed={sort === ascKey}>
+        {label} ↑
+      </button>
+      <button type="button" onClick={() => handleSort(descKey)} aria-pressed={sort === descKey}>
+        ↓
+      </button>
+    </th>
+  )
 
   return (
     <section className="history">
@@ -60,11 +78,11 @@ export default function History() {
         <thead>
           <tr>
             <th>ID</th>
-            <th>Title</th>
+            {renderSortHeader("Title", "title_asc", "title_desc")}
             <th>Completed</th>
-            <th>Created At</th>
-            <th>Updated At</th>
-            <th>Due Date</th>
+            {renderSortHeader("Created At", "createdAt_asc", "createdAt_desc")}
+            {renderSortHeader("Updated At", "updatedAt_asc", "updatedAt_desc")}
+            {renderSortHeader("Due Date", "dueDate_asc", "dueDate_desc")}
             <th>Priority</th>
             <th>Notes</th>
             <th>Category</th>

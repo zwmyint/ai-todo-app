@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { addTodo, editTodo, getTodos, removeTodo, type ListOptions } from "./api/todos"
 import type { Todo } from "./types/todo"
 import "./App.css"
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
+import History from "./History"
 
 type Filter = "all" | "active" | "completed"
 
@@ -37,7 +39,6 @@ function App() {
   // UI filter / sort
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<string>("createdAt_desc")
-  const [view, setView] = useState<"list" | "history">("list")
 
   const editInputRef = useRef<HTMLInputElement | null>(null)
   const newTodoInputRef = useRef<HTMLInputElement | null>(null)
@@ -61,10 +62,8 @@ function App() {
   }
 
   useEffect(() => {
-    if (view === "list") {
-      void loadTodos({ sort })
-    }
-  }, [sort, view])
+    void loadTodos({ sort })
+  }, [sort])
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -186,8 +185,12 @@ function App() {
   }, [todos, filter])
 
   return (
-    <main className="container">
-      <h1>To-Do List</h1>
+    <BrowserRouter>
+      <main className="container">
+        <h1>To-Do List</h1>
+        <nav>
+          <Link to="/">List</Link> | <Link to="/history">History</Link>
+        </nav>
 
       <form onSubmit={handleSubmit} className="add-form">
         <input
@@ -210,14 +213,6 @@ function App() {
         </div>
 
         <div className="controls">
-          <div className="view-toggle">
-            <button type="button" onClick={() => setView("list")} className={view === "list" ? "active" : ""} aria-pressed={view === "list"}>
-              List
-            </button>
-            <button type="button" onClick={() => setView("history")} className={view === "history" ? "active" : ""} aria-pressed={view === "history"}>
-              History
-            </button>
-          </div>
           <div className="filter" role="tablist" aria-label="Filter todos">
             <button
               className={filter === "all" ? "active" : ""}
@@ -273,78 +268,80 @@ function App() {
 
       {isLoading && <p className="status">Loading todos...</p>}
 
-      {!isLoading && view === "list" && visibleTodos.length === 0 && (
-        <div className="empty-state" role="region" aria-label="Empty state">
-          <p className="status">No tasks for this view.</p>
-          <p className="status">Add your first task using the form above.</p>
-        </div>
-      )}
-
-      {view === "list" ? (
-        <ul className="todo-list">
-          {visibleTodos.map((todo) => (
-          <li key={todo.id} className="todo-item">
-            <label>
-              <input
-                type="checkbox"
-                checked={todo.completed}
-                disabled={!!togglingIds[todo.id]}
-                onChange={() => void handleToggleCompleted(todo)}
-                aria-label={todo.completed ? `Mark ${todo.title} as active` : `Mark ${todo.title} as completed`}
-              />
-
-              {editingId === todo.id ? (
-                <input
-                  ref={editInputRef}
-                  className="edit-input"
-                  value={editingTitle}
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") submitEdit(todo.id)
-                    if (e.key === "Escape") cancelEditing()
-                  }}
-                  aria-label={`Edit title for ${todo.title}`}
-                  aria-invalid={updateError ? true : undefined}
-                />
-              ) : (
-                <span className={todo.completed ? "completed" : ""}>{todo.title}</span>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              {!isLoading && visibleTodos.length === 0 && (
+                <div className="empty-state" role="region" aria-label="Empty state">
+                  <p className="status">No tasks for this view.</p>
+                  <p className="status">Add your first task using the form above.</p>
+                </div>
               )}
-            </label>
 
-            <div className="actions">
-              {editingId === todo.id ? (
-                <>
-                  <button type="button" onClick={() => void submitEdit(todo.id)} disabled={!!togglingIds[todo.id]} aria-label={`Save ${todo.title}`}>
-                    Save
-                  </button>
-                  <button type="button" onClick={cancelEditing} aria-label={`Cancel editing ${todo.title}`}>
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button type="button" onClick={() => startEditing(todo)} disabled={!!deletingIds[todo.id]} aria-label={`Edit ${todo.title}`}>
-                    Edit
-                  </button>
-                  <button type="button" className="danger" onClick={() => void handleDelete(todo.id)} disabled={!!deletingIds[todo.id]} aria-label={`Delete ${todo.title}`}>
-                    {deletingIds[todo.id] ? "Deleting..." : "Delete"}
-                  </button>
-                </>
-              )}
-            </div>
-          </li>
-        ))}
-        </ul>
-    ) : (
-      // lazy-load History component to keep bundle small
-      <React.Suspense fallback={<div className="status">Loading history...</div>}>
-        <HistoryLazy />
-      </React.Suspense>
-    )}
+              <ul className="todo-list">
+                {visibleTodos.map((todo) => (
+                  <li key={todo.id} className="todo-item">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={todo.completed}
+                        disabled={!!togglingIds[todo.id]}
+                        onChange={() => void handleToggleCompleted(todo)}
+                        aria-label={todo.completed ? `Mark ${todo.title} as active` : `Mark ${todo.title} as completed`}
+                      />
+
+                      {editingId === todo.id ? (
+                        <input
+                          ref={editInputRef}
+                          className="edit-input"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") submitEdit(todo.id)
+                            if (e.key === "Escape") cancelEditing()
+                          }}
+                          aria-label={`Edit title for ${todo.title}`}
+                          aria-invalid={updateError ? true : undefined}
+                        />
+                      ) : (
+                        <span className={todo.completed ? "completed" : ""}>{todo.title}</span>
+                      )}
+                    </label>
+
+                    <div className="actions">
+                      {editingId === todo.id ? (
+                        <>
+                          <button type="button" onClick={() => void submitEdit(todo.id)} disabled={!!togglingIds[todo.id]} aria-label={`Save ${todo.title}`}>
+                            Save
+                          </button>
+                          <button type="button" onClick={cancelEditing} aria-label={`Cancel editing ${todo.title}`}>
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => startEditing(todo)} disabled={!!deletingIds[todo.id]} aria-label={`Edit ${todo.title}`}>
+                            Edit
+                          </button>
+                          <button type="button" className="danger" onClick={() => void handleDelete(todo.id)} disabled={!!deletingIds[todo.id]} aria-label={`Delete ${todo.title}`}>
+                            {deletingIds[todo.id] ? "Deleting..." : "Delete"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          }
+        />
+        <Route path="/history" element={<History />} />
+      </Routes>
     </main>
+    </BrowserRouter>
   )
 }
-
-const HistoryLazy = React.lazy(() => import("./History"))
 
 export default App
