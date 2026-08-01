@@ -20,8 +20,29 @@ const assertOk = async <T>(response: Response): Promise<T> => {
   return payload.data
 }
 
-export const getTodos = async (): Promise<Todo[]> => {
-  const response = await fetch(TODOS_ENDPOINT)
+export type ListOptions = {
+  completed?: boolean
+  search?: string
+  sort?: string
+  page?: number
+  limit?: number
+}
+
+const buildQuery = (opts?: ListOptions) => {
+  if (!opts) return ""
+  const params = new URLSearchParams()
+  if (opts.completed !== undefined) params.set("completed", String(opts.completed))
+  if (opts.search) params.set("search", opts.search)
+  if (opts.sort) params.set("sort", opts.sort)
+  if (opts.page !== undefined) params.set("page", String(opts.page))
+  if (opts.limit !== undefined) params.set("limit", String(opts.limit))
+  const qs = params.toString()
+  return qs ? `?${qs}` : ""
+}
+
+export const getTodos = async (opts?: ListOptions): Promise<Todo[]> => {
+  const qs = buildQuery(opts)
+  const response = await fetch(`${TODOS_ENDPOINT}${qs}`)
   return assertOk<Todo[]>(response)
 }
 

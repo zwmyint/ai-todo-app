@@ -37,6 +37,43 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.counts {
+  display: flex;
+  gap: 0.75rem;
+  color: #656d76;
+}
+
+.controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.filter button {
+  background: transparent;
+  color: #1f6feb;
+  border: 1px solid transparent;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+}
+
+.filter button.active {
+  background: #1f6feb;
+  color: #fff;
+}
+
+.sort select {
+  margin-left: 0.5rem;
+}
+
 .todo-list {
   list-style: none;
   margin: 1rem 0 0;
@@ -60,6 +97,17 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+}
+
+.edit-input {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .completed {
