@@ -10,6 +10,8 @@ import type { TodoSortOption } from "../types/todo.js"
 
 const MAX_TITLE_LENGTH = 200
 const MAX_SEARCH_LENGTH = 200
+const MAX_NOTES_LENGTH = 2000
+const MAX_CATEGORY_LENGTH = 100
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 50
 
@@ -45,6 +47,8 @@ const parseSortOption = (value: string | undefined): TodoSortOption | null => {
     "updatedAt_asc",
     "title_desc",
     "title_asc",
+    "dueDate_asc",
+    "dueDate_desc",
   ]
 
   return allowedSorts.includes(value as TodoSortOption) ? (value as TodoSortOption) : null
@@ -63,6 +67,23 @@ const validateTitle = (title: unknown): string | null => {
   return trimmed
 }
 
+const validateOptionalString = (value: unknown, maxLen: number): string | null => {
+  if (value === undefined || value === null) return null
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  if (trimmed.length > maxLen) return null
+  return trimmed
+}
+
+const parseISODate = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null
+  if (typeof value !== "string") return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
 const getRouteId = (params: Record<string, unknown> | undefined): string => {
   const id = params?.id
   if (Array.isArray(id)) {
@@ -78,17 +99,22 @@ const getRouteId = (params: Record<string, unknown> | undefined): string => {
 
 const handleUpdate = (req: express.Request, res: express.Response) => {
   const id = getRouteId(req.params)
-  const { title, completed } = req.body ?? {}
+  const { title, completed, dueDate, priority, notes, category } = req.body ?? {}
 
-  const hasTitle = title !== undefined
-  const hasCompleted = completed !== undefined
+  const hasAny =
+    title !== undefined ||
+    completed !== undefined ||
+    dueDate !== undefined ||
+    priority !== undefined ||
+    notes !== undefined ||
+    category !== undefined
 
-  if (!hasTitle && !hasCompleted) {
-    return sendError(res, 400, "at least one of title or completed is required")
+  if (!hasAny) {
+    return sendError(res, 400, "at least one field is required to update")
   }
 
   let validatedTitle: string | undefined
-  if (hasTitle) {
+  if (title !== undefined) {
     const parsedTitle = validateTitle(title)
     if (parsedTitle === null) {
       return sendError(res, 400, "title must be a non-empty string and less than 200 characters")
@@ -97,16 +123,49 @@ const handleUpdate = (req: express.Request, res: express.Response) => {
   }
 
   let completedValue: boolean | undefined
-  if (hasCompleted) {
+  if (completed !== undefined) {
     if (typeof completed !== "boolean") {
       return sendError(res, 400, "completed must be a boolean")
     }
     completedValue = completed
   }
 
+  let validatedDueDate: string | undefined
+  if (dueDate !== undefined) {
+    const parsed = parseISODate(dueDate)
+    if (parsed === null) return sendError(res, 400, "dueDate must be a valid ISO date string")
+    validatedDueDate = parsed
+  }
+
+  let validatedPriority: number | undefined
+  if (priority !== undefined) {
+    if (!Number.isInteger(priority) || priority < 0 || priority > 5) {
+      return sendError(res, 400, "priority must be an integer between 0 and 5")
+    }
+    validatedPriority = priority
+  }
+
+  let validatedNotes: string | undefined
+  if (notes !== undefined) {
+    const parsed = validateOptionalString(notes, MAX_NOTES_LENGTH)
+    if (parsed === null) return sendError(res, 400, "notes must be a non-empty string under 2000 chars")
+    validatedNotes = parsed
+  }
+
+  let validatedCategory: string | undefined
+  if (category !== undefined) {
+    const parsed = validateOptionalString(category, MAX_CATEGORY_LENGTH)
+    if (parsed === null) return sendError(res, 400, "category must be a non-empty string under 100 chars")
+    validatedCategory = parsed
+  }
+
   const todo = updateTodo(id, {
     title: validatedTitle,
     completed: completedValue,
+    dueDate: validatedDueDate,
+    priority: validatedPriority,
+    notes: validatedNotes,
+    category: validatedCategory,
   })
 
   if (!todo) {
@@ -170,7 +229,7 @@ todosRouter.get("/", (req, res) => {
       return sendError(
         res,
         400,
-        "sort must be one of createdAt_desc, createdAt_asc, updatedAt_desc, updatedAt_asc, title_desc, title_asc",
+        "sort must be one of createdAt_desc, createdAt_asc, updatedAt_desc, updatedAt_asc, title_desc, title_asc, dueDate_asc, dueDate_desc",
       )
     }
     sort = parsed
@@ -202,8 +261,14 @@ todosRouter.get("/", (req, res) => {
     limit = DEFAULT_LIMIT
   }
 
-  const todos = listTodos({ completed, search, sort, page, limit })
-  return res.status(200).json({ data: todos })
+  const result = listTodos({ completed, search, sort, page, limit })
+
+  // Preserve backward compatibility: when page/limit present, return items with total
+  if (page !== undefined || limit !== undefined) {
+    return res.status(200).json({ data: { items: result.todos, total: result.total } })
+  }
+
+  return res.status(200).json({ data: result.todos })
 })
 
 todosRouter.get("/:id", (req, res) => {
@@ -218,14 +283,39 @@ todosRouter.get("/:id", (req, res) => {
 })
 
 todosRouter.post("/", (req, res) => {
-  const title = req.body?.title
-  const validatedTitle = validateTitle(title)
+  const { title, dueDate, priority, notes, category } = req.body ?? {}
 
+  const validatedTitle = validateTitle(title)
   if (validatedTitle === null) {
     return sendError(res, 400, "title is required and must be 1-200 characters")
   }
 
-  const todo = createTodo({ title: validatedTitle })
+  let validatedDueDate: string | null = null
+  if (dueDate !== undefined) {
+    const parsed = parseISODate(dueDate)
+    if (parsed === null) return sendError(res, 400, "dueDate must be a valid ISO date string")
+    validatedDueDate = parsed
+  }
+
+  let validatedPriority: number | undefined = undefined
+  if (priority !== undefined) {
+    if (!Number.isInteger(priority) || priority < 0 || priority > 5) {
+      return sendError(res, 400, "priority must be an integer between 0 and 5")
+    }
+    validatedPriority = priority
+  }
+
+  const validatedNotes = validateOptionalString(notes, MAX_NOTES_LENGTH)
+  const validatedCategory = validateOptionalString(category, MAX_CATEGORY_LENGTH)
+
+  const todo = createTodo({
+    title: validatedTitle,
+    dueDate: validatedDueDate ?? undefined,
+    priority: validatedPriority,
+    notes: validatedNotes ?? undefined,
+    category: validatedCategory ?? undefined,
+  })
+
   return res.status(201).json({ data: todo })
 })
 

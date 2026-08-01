@@ -40,10 +40,19 @@ const buildQuery = (opts?: ListOptions) => {
   return qs ? `?${qs}` : ""
 }
 
-export const getTodos = async (opts?: ListOptions): Promise<Todo[]> => {
+export type PaginatedTodos = { items: Todo[]; total: number }
+
+export const getTodos = async (
+  opts?: ListOptions,
+): Promise<Todo[] | PaginatedTodos> => {
   const qs = buildQuery(opts)
   const response = await fetch(`${TODOS_ENDPOINT}${qs}`)
-  return assertOk<Todo[]>(response)
+  const data = await assertOk<any>(response)
+  // server returns `{ data: [...] }` for non-paginated and `{ data: { items, total } }` for paginated
+  if (data && typeof data === "object" && Array.isArray(data.items) && typeof data.total === "number") {
+    return { items: data.items as Todo[], total: data.total }
+  }
+  return data as Todo[]
 }
 
 export const addTodo = async (title: string): Promise<Todo> => {

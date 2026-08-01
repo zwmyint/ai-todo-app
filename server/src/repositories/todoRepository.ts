@@ -14,6 +14,10 @@ interface TodoRow {
   completed: number
   created_at: string
   updated_at: string
+  due_date?: string | null
+  priority?: number
+  notes?: string | null
+  category?: string | null
 }
 
 const sortMapping: Record<TodoSortOption, string> = {
@@ -23,6 +27,8 @@ const sortMapping: Record<TodoSortOption, string> = {
   updatedAt_asc: "datetime(updated_at) ASC",
   title_desc: "title COLLATE NOCASE DESC",
   title_asc: "title COLLATE NOCASE ASC",
+  dueDate_asc: "datetime(due_date) ASC",
+  dueDate_desc: "datetime(due_date) DESC",
 }
 
 const toTodo = (row: TodoRow): Todo => ({
@@ -31,6 +37,10 @@ const toTodo = (row: TodoRow): Todo => ({
   completed: row.completed === 1,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  dueDate: row.due_date ?? null,
+  priority: row.priority ?? 0,
+  notes: row.notes ?? null,
+  category: row.category ?? null,
 })
 
 const runDatabaseOperation = <T>(operation: () => T): T => {
@@ -42,7 +52,7 @@ const runDatabaseOperation = <T>(operation: () => T): T => {
   }
 }
 
-export const listTodos = (options?: ListTodosOptions): Todo[] =>
+export const listTodos = (options?: ListTodosOptions): ListTodosResult =>
   runDatabaseOperation(() => {
     const clauses: string[] = []
     const params: unknown[] = []
@@ -53,9 +63,21 @@ export const listTodos = (options?: ListTodosOptions): Todo[] =>
     }
 
     if (options?.search) {
-      clauses.push("LOWER(title) LIKE ?")
-      params.push(`%${options.search.toLowerCase()}%`)
+      // search across title, notes, and category
+      clauses.push("(LOWER(title) LIKE ? OR LOWER(coalesce(notes, '')) LIKE ? OR LOWER(coalesce(category, '')) LIKE ?)")
+      const s = `%${options.search.toLowerCase()}%`
+      params.push(s, s, s)
     }
+
+    // build count query (without order/limit/offset)
+    let countSql = "SELECT COUNT(*) as cnt FROM todos"
+    if (clauses.length > 0) {
+      countSql += ` WHERE ${clauses.join(" AND ")}`
+    }
+
+    const countStmt = db.prepare(countSql)
+    const countRow = countStmt.get(...params) as { cnt: number }
+    const total = typeof countRow?.cnt === "number" ? countRow.cnt : 0
 
     let sql = "SELECT * FROM todos"
     if (clauses.length > 0) {
@@ -65,19 +87,21 @@ export const listTodos = (options?: ListTodosOptions): Todo[] =>
     const orderBy = options?.sort ? sortMapping[options.sort] : sortMapping.createdAt_desc
     sql += ` ORDER BY ${orderBy}`
 
+    const queryParams = [...params]
+
     if (options?.limit !== undefined) {
       sql += " LIMIT ?"
-      params.push(options.limit)
+      queryParams.push(options.limit)
     }
 
     if (options?.page !== undefined && options?.limit !== undefined) {
       sql += " OFFSET ?"
-      params.push((options.page - 1) * options.limit)
+      queryParams.push((options.page - 1) * options.limit)
     }
 
     const stmt = db.prepare(sql)
-    const rows = stmt.all(...params) as TodoRow[]
-    return rows.map(toTodo)
+    const rows = stmt.all(...queryParams) as TodoRow[]
+    return { todos: rows.map(toTodo), total }
   })
 
 export const createTodo = (input: CreateTodoInput): Todo =>
@@ -86,9 +110,19 @@ export const createTodo = (input: CreateTodoInput): Todo =>
     const id = randomUUID()
 
     const stmt = db.prepare(
-      "INSERT INTO todos (id, title, completed, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO todos (id, title, completed, created_at, updated_at, due_date, priority, notes, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    stmt.run(id, input.title, 0, now, now)
+    stmt.run(
+      id,
+      input.title,
+      0,
+      now,
+      now,
+      input.dueDate ?? null,
+      input.priority ?? 0,
+      input.notes ?? null,
+      input.category ?? null,
+    )
 
     return {
       id,
@@ -96,6 +130,10 @@ export const createTodo = (input: CreateTodoInput): Todo =>
       completed: false,
       createdAt: now,
       updatedAt: now,
+      dueDate: input.dueDate ?? null,
+      priority: input.priority ?? 0,
+      notes: input.notes ?? null,
+      category: input.category ?? null,
     }
   })
 
@@ -115,18 +153,27 @@ export const updateTodo = (id: string, input: UpdateTodoInput): Todo | null =>
 
     const nextTitle = input.title ?? existing.title
     const nextCompleted = input.completed ?? existing.completed
+    const nextDue = input.dueDate !== undefined ? input.dueDate : existing.dueDate
+    const nextPriority = input.priority !== undefined ? input.priority : existing.priority ?? 0
+    const nextNotes = input.notes !== undefined ? input.notes : existing.notes
+    const nextCategory = input.category !== undefined ? input.category : existing.category
+
     const now = new Date().toISOString()
 
     const stmt = db.prepare(
-      "UPDATE todos SET title = ?, completed = ?, updated_at = ? WHERE id = ?",
+      "UPDATE todos SET title = ?, completed = ?, updated_at = ?, due_date = ?, priority = ?, notes = ?, category = ? WHERE id = ?",
     )
-    stmt.run(nextTitle, nextCompleted ? 1 : 0, now, id)
+    stmt.run(nextTitle, nextCompleted ? 1 : 0, now, nextDue ?? null, nextPriority ?? 0, nextNotes ?? null, nextCategory ?? null, id)
 
     return {
       ...existing,
       title: nextTitle,
       completed: nextCompleted,
       updatedAt: now,
+      dueDate: nextDue ?? null,
+      priority: nextPriority ?? 0,
+      notes: nextNotes ?? null,
+      category: nextCategory ?? null,
     }
   })
 

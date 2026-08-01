@@ -43,10 +43,12 @@ describe("todoRepository", () => {
     createTodo({ title: "Learn tests" })
     createTodo({ title: "Write docs" })
 
-    const all = listTodos()
+    const allResult = listTodos()
+    const all = Array.isArray(allResult) ? allResult : allResult.todos
     assert.equal(all.length, 2)
 
-    const filtered = listTodos({ search: "tests" })
+    const filteredResult = listTodos({ search: "tests" })
+    const filtered = Array.isArray(filteredResult) ? filteredResult : filteredResult.todos
     assert.equal(filtered.length, 1)
     assert.equal(filtered[0].title, "Learn tests")
   })

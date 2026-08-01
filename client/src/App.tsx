@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { addTodo, editTodo, getTodos, removeTodo, type ListOptions } from "./api/todos"
 import type { Todo } from "./types/todo"
@@ -37,6 +37,7 @@ function App() {
   // UI filter / sort
   const [filter, setFilter] = useState<Filter>("all")
   const [sort, setSort] = useState<string>("createdAt_desc")
+  const [view, setView] = useState<"list" | "history">("list")
 
   const editInputRef = useRef<HTMLInputElement | null>(null)
   const newTodoInputRef = useRef<HTMLInputElement | null>(null)
@@ -47,7 +48,11 @@ function App() {
 
     try {
       const data = await getTodos(opts)
-      setTodos(data)
+      if (Array.isArray(data)) {
+        setTodos(data)
+      } else {
+        setTodos(data.items)
+      }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Unable to load todos")
     } finally {
@@ -56,8 +61,10 @@ function App() {
   }
 
   useEffect(() => {
-    void loadTodos({ sort })
-  }, [sort])
+    if (view === "list") {
+      void loadTodos({ sort })
+    }
+  }, [sort, view])
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -203,6 +210,14 @@ function App() {
         </div>
 
         <div className="controls">
+          <div className="view-toggle">
+            <button type="button" onClick={() => setView("list")} className={view === "list" ? "active" : ""} aria-pressed={view === "list"}>
+              List
+            </button>
+            <button type="button" onClick={() => setView("history")} className={view === "history" ? "active" : ""} aria-pressed={view === "history"}>
+              History
+            </button>
+          </div>
           <div className="filter" role="tablist" aria-label="Filter todos">
             <button
               className={filter === "all" ? "active" : ""}
@@ -258,15 +273,16 @@ function App() {
 
       {isLoading && <p className="status">Loading todos...</p>}
 
-      {!isLoading && visibleTodos.length === 0 && (
+      {!isLoading && view === "list" && visibleTodos.length === 0 && (
         <div className="empty-state" role="region" aria-label="Empty state">
           <p className="status">No tasks for this view.</p>
           <p className="status">Add your first task using the form above.</p>
         </div>
       )}
 
-      <ul className="todo-list">
-        {visibleTodos.map((todo) => (
+      {view === "list" ? (
+        <ul className="todo-list">
+          {visibleTodos.map((todo) => (
           <li key={todo.id} className="todo-item">
             <label>
               <input
@@ -318,9 +334,17 @@ function App() {
             </div>
           </li>
         ))}
-      </ul>
+        </ul>
+    ) : (
+      // lazy-load History component to keep bundle small
+      <React.Suspense fallback={<div className="status">Loading history...</div>}>
+        <HistoryLazy />
+      </React.Suspense>
+    )}
     </main>
   )
 }
+
+const HistoryLazy = React.lazy(() => import("./History"))
 
 export default App

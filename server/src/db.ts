@@ -22,7 +22,7 @@ export const db = new Database(dbPath)
 
 db.pragma("journal_mode = WAL")
 
-const CURRENT_SCHEMA_VERSION = 1
+const CURRENT_SCHEMA_VERSION = 2
 
 const migrations: Record<number, () => void> = {
   1: () => {
@@ -35,6 +35,24 @@ const migrations: Record<number, () => void> = {
         updated_at TEXT NOT NULL
       )
     `)
+  },
+  2: () => {
+    // add new columns for richer todo items
+    // SQLite supports ADD COLUMN; new columns default to NULL if not specified
+    try {
+      db.exec(`ALTER TABLE todos ADD COLUMN due_date TEXT`)
+    } catch (e) {
+      // ignore if column already exists
+    }
+    try {
+      db.exec(`ALTER TABLE todos ADD COLUMN priority INTEGER NOT NULL DEFAULT 0`)
+    } catch (e) {}
+    try {
+      db.exec(`ALTER TABLE todos ADD COLUMN notes TEXT`)
+    } catch (e) {}
+    try {
+      db.exec(`ALTER TABLE todos ADD COLUMN category TEXT`)
+    } catch (e) {}
   },
 }
 
