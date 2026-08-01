@@ -79,7 +79,23 @@ cd client
 npm run build
 ```
 
-## 6. API endpoints
+## 6. Testing
+
+Backend:
+
+```bash
+cd server
+npm test
+```
+
+Frontend:
+
+```bash
+cd client
+npm test
+```
+
+## 7. API endpoints
 
 Base URL: `http://localhost:4000`
 
