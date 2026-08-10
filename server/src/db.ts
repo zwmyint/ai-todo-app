@@ -46,13 +46,13 @@ const migrations: Record<number, () => void> = {
     }
     try {
       db.exec(`ALTER TABLE todos ADD COLUMN priority INTEGER NOT NULL DEFAULT 0`)
-    } catch (e) {}
+    } catch (e) { }
     try {
       db.exec(`ALTER TABLE todos ADD COLUMN notes TEXT`)
-    } catch (e) {}
+    } catch (e) { }
     try {
       db.exec(`ALTER TABLE todos ADD COLUMN category TEXT`)
-    } catch (e) {}
+    } catch (e) { }
   },
 }
 

@@ -192,154 +192,154 @@ function App() {
           <Link to="/">List</Link> | <Link to="/history">History</Link>
         </nav>
 
-      <form onSubmit={handleSubmit} className="add-form">
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Add a new task..."
-          aria-label="Todo title"
-          ref={newTodoInputRef}
-        />
-        <button type="submit" disabled={title.trim().length === 0 || isAdding} aria-label="Add todo">
-          {isAdding ? "Adding..." : "Add"}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="add-form">
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Add a new task..."
+            aria-label="Todo title"
+            ref={newTodoInputRef}
+          />
+          <button type="submit" disabled={title.trim().length === 0 || isAdding} aria-label="Add todo">
+            {isAdding ? "Adding..." : "Add"}
+          </button>
+        </form>
 
-      <div className="meta">
-        <div className="counts">
-          <span>{counts.total} total</span>
-          <span>{counts.active} active</span>
-          <span>{counts.completed} completed</span>
-        </div>
-
-        <div className="controls">
-          <div className="filter" role="tablist" aria-label="Filter todos">
-            <button
-              className={filter === "all" ? "active" : ""}
-              onClick={() => setFilter("all")}
-              type="button"
-              aria-pressed={filter === "all"}
-            >
-              All
-            </button>
-            <button
-              className={filter === "active" ? "active" : ""}
-              onClick={() => setFilter("active")}
-              type="button"
-              aria-pressed={filter === "active"}
-            >
-              Active
-            </button>
-            <button
-              className={filter === "completed" ? "active" : ""}
-              onClick={() => setFilter("completed")}
-              type="button"
-              aria-pressed={filter === "completed"}
-            >
-              Completed
-            </button>
+        <div className="meta">
+          <div className="counts">
+            <span>{counts.total} total</span>
+            <span>{counts.active} active</span>
+            <span>{counts.completed} completed</span>
           </div>
 
-          <div className="sort">
-            <label>
-              Sort:
-              <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort todos">
-                {defaultSortOptions().map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="controls">
+            <div className="filter" role="tablist" aria-label="Filter todos">
+              <button
+                className={filter === "all" ? "active" : ""}
+                onClick={() => setFilter("all")}
+                type="button"
+                aria-pressed={filter === "all"}
+              >
+                All
+              </button>
+              <button
+                className={filter === "active" ? "active" : ""}
+                onClick={() => setFilter("active")}
+                type="button"
+                aria-pressed={filter === "active"}
+              >
+                Active
+              </button>
+              <button
+                className={filter === "completed" ? "active" : ""}
+                onClick={() => setFilter("completed")}
+                type="button"
+                aria-pressed={filter === "completed"}
+              >
+                Completed
+              </button>
+            </div>
+
+            <div className="sort">
+              <label>
+                Sort:
+                <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort todos">
+                  {defaultSortOptions().map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div aria-live="polite" role="status" className="sr-only">
-        {isLoading ? "Loading todos" : `${counts.total} total, ${counts.active} active, ${counts.completed} completed`}
-      </div>
+        <div aria-live="polite" role="status" className="sr-only">
+          {isLoading ? "Loading todos" : `${counts.total} total, ${counts.active} active, ${counts.completed} completed`}
+        </div>
 
-      <div aria-live="polite">
-        {loadError && <p className="error">{loadError}</p>}
-        {addError && <p className="error">{addError}</p>}
-        {updateError && <p className="error">{updateError}</p>}
-        {deleteError && <p className="error">{deleteError}</p>}
-      </div>
+        <div aria-live="polite">
+          {loadError && <p className="error">{loadError}</p>}
+          {addError && <p className="error">{addError}</p>}
+          {updateError && <p className="error">{updateError}</p>}
+          {deleteError && <p className="error">{deleteError}</p>}
+        </div>
 
-      {isLoading && <p className="status">Loading todos...</p>}
+        {isLoading && <p className="status">Loading todos...</p>}
 
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              {!isLoading && visibleTodos.length === 0 && (
-                <div className="empty-state" role="region" aria-label="Empty state">
-                  <p className="status">No tasks for this view.</p>
-                  <p className="status">Add your first task using the form above.</p>
-                </div>
-              )}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                {!isLoading && visibleTodos.length === 0 && (
+                  <div className="empty-state" role="region" aria-label="Empty state">
+                    <p className="status">No tasks for this view.</p>
+                    <p className="status">Add your first task using the form above.</p>
+                  </div>
+                )}
 
-              <ul className="todo-list">
-                {visibleTodos.map((todo) => (
-                  <li key={todo.id} className="todo-item">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={todo.completed}
-                        disabled={!!togglingIds[todo.id]}
-                        onChange={() => void handleToggleCompleted(todo)}
-                        aria-label={todo.completed ? `Mark ${todo.title} as active` : `Mark ${todo.title} as completed`}
-                      />
-
-                      {editingId === todo.id ? (
+                <ul className="todo-list">
+                  {visibleTodos.map((todo) => (
+                    <li key={todo.id} className="todo-item">
+                      <label>
                         <input
-                          ref={editInputRef}
-                          className="edit-input"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") submitEdit(todo.id)
-                            if (e.key === "Escape") cancelEditing()
-                          }}
-                          aria-label={`Edit title for ${todo.title}`}
-                          aria-invalid={updateError ? true : undefined}
+                          type="checkbox"
+                          checked={todo.completed}
+                          disabled={!!togglingIds[todo.id]}
+                          onChange={() => void handleToggleCompleted(todo)}
+                          aria-label={todo.completed ? `Mark ${todo.title} as active` : `Mark ${todo.title} as completed`}
                         />
-                      ) : (
-                        <span className={todo.completed ? "completed" : ""}>{todo.title}</span>
-                      )}
-                    </label>
 
-                    <div className="actions">
-                      {editingId === todo.id ? (
-                        <>
-                          <button type="button" onClick={() => void submitEdit(todo.id)} disabled={!!togglingIds[todo.id]} aria-label={`Save ${todo.title}`}>
-                            Save
-                          </button>
-                          <button type="button" onClick={cancelEditing} aria-label={`Cancel editing ${todo.title}`}>
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button type="button" onClick={() => startEditing(todo)} disabled={!!deletingIds[todo.id]} aria-label={`Edit ${todo.title}`}>
-                            Edit
-                          </button>
-                          <button type="button" className="danger" onClick={() => void handleDelete(todo.id)} disabled={!!deletingIds[todo.id]} aria-label={`Delete ${todo.title}`}>
-                            {deletingIds[todo.id] ? "Deleting..." : "Delete"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          }
-        />
-        <Route path="/history" element={<History />} />
-      </Routes>
-    </main>
+                        {editingId === todo.id ? (
+                          <input
+                            ref={editInputRef}
+                            className="edit-input"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") submitEdit(todo.id)
+                              if (e.key === "Escape") cancelEditing()
+                            }}
+                            aria-label={`Edit title for ${todo.title}`}
+                            aria-invalid={updateError ? true : undefined}
+                          />
+                        ) : (
+                          <span className={todo.completed ? "completed" : ""}>{todo.title}</span>
+                        )}
+                      </label>
+
+                      <div className="actions">
+                        {editingId === todo.id ? (
+                          <>
+                            <button type="button" onClick={() => void submitEdit(todo.id)} disabled={!!togglingIds[todo.id]} aria-label={`Save ${todo.title}`}>
+                              Save
+                            </button>
+                            <button type="button" onClick={cancelEditing} aria-label={`Cancel editing ${todo.title}`}>
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => startEditing(todo)} disabled={!!deletingIds[todo.id]} aria-label={`Edit ${todo.title}`}>
+                              Edit
+                            </button>
+                            <button type="button" className="danger" onClick={() => void handleDelete(todo.id)} disabled={!!deletingIds[todo.id]} aria-label={`Delete ${todo.title}`}>
+                              {deletingIds[todo.id] ? "Deleting..." : "Delete"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            }
+          />
+          <Route path="/history" element={<History />} />
+        </Routes>
+      </main>
     </BrowserRouter>
   )
 }
