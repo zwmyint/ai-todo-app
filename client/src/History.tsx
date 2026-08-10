@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import type { Todo } from "./types/todo"
 import { getTodos } from "./api/todos"
 import "./App.css"
+import 'bootstrap/dist/css/bootstrap.min.css'
 
 const PAGE_SIZE = 20
 
@@ -44,48 +45,52 @@ export default function History() {
     }
   }, [page, sort])
 
-  const handleSort = (newSort: string) => {
-    if (newSort === sort) return
-    setSort(newSort)
+  const toggleSort = (ascKey: string, descKey: string) => {
+    // toggle between asc and desc for the given keys
     setPage(1)
+    setSort((current) => (current === ascKey ? descKey : ascKey))
   }
 
-  const renderSortHeader = (label: string, ascKey: string, descKey: string) => (
-    <th>
-      <button type="button" onClick={() => handleSort(ascKey)} aria-pressed={sort === ascKey}>
-        {label} ↑
-      </button>
-      <button type="button" onClick={() => handleSort(descKey)} aria-pressed={sort === descKey}>
-        ↓
-      </button>
-    </th>
-  )
+  const renderSortableHeader = (label: string, ascKey: string, descKey: string) => {
+    const indicator = sort === ascKey ? '▲' : sort === descKey ? '▼' : '↕'
+    return (
+      <th scope="col">
+        <button
+          type="button"
+          className="btn btn-link p-0"
+          onClick={() => toggleSort(ascKey, descKey)}
+          aria-pressed={sort === ascKey || sort === descKey}
+          aria-label={`Sort by ${label}`}
+        >
+          {label} <span aria-hidden>{indicator}</span>
+        </button>
+      </th>
+    )
+  }
 
   return (
-    <section className="history">
+    <section className="history container mt-3">
       <h2>History</h2>
       {loading && <p className="status">Loading history...</p>}
       {error && <p className="error">{error}</p>}
 
-      <div className="history-meta">
-        <span>Total: {total}</span>
-        <span>
-          Page: {page} / {totalPages}
-        </span>
+      <div className="history-meta mb-2 d-flex gap-3">
+        <span className="badge bg-secondary">Total: {total}</span>
+        <span className="badge bg-secondary">Page: {page} / {totalPages}</span>
       </div>
 
-      <table className="history-table">
+      <table className="table table-hover table-striped history-table">
         <thead>
           <tr>
-            <th>ID</th>
-            {renderSortHeader("Title", "title_asc", "title_desc")}
-            <th>Completed</th>
-            {renderSortHeader("Created At", "createdAt_asc", "createdAt_desc")}
-            {renderSortHeader("Updated At", "updatedAt_asc", "updatedAt_desc")}
-            {renderSortHeader("Due Date", "dueDate_asc", "dueDate_desc")}
-            <th>Priority</th>
-            <th>Notes</th>
-            <th>Category</th>
+            <th scope="col">ID</th>
+            {renderSortableHeader("Title", "title_asc", "title_desc")}
+            <th scope="col">Completed</th>
+            {renderSortableHeader("Created At", "createdAt_asc", "createdAt_desc")}
+            {renderSortableHeader("Updated At", "updatedAt_asc", "updatedAt_desc")}
+            {renderSortableHeader("Due Date", "dueDate_asc", "dueDate_desc")}
+            <th scope="col">Priority</th>
+            <th scope="col">Notes</th>
+            <th scope="col">Category</th>
           </tr>
         </thead>
         <tbody>
@@ -105,18 +110,18 @@ export default function History() {
         </tbody>
       </table>
 
-      <div className="pagination">
-        <button type="button" onClick={() => setPage(1)} disabled={page === 1} aria-label="First page">
+      <div className="pagination d-flex gap-2 align-items-center">
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPage(1)} disabled={page === 1} aria-label="First page">
           « First
         </button>
-        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} aria-label="Previous page">
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} aria-label="Previous page">
           ‹ Prev
         </button>
         <span className="page-info">Page {page} of {totalPages}</span>
-        <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} aria-label="Next page">
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} aria-label="Next page">
           Next ›
         </button>
-        <button type="button" onClick={() => setPage(totalPages)} disabled={page === totalPages} aria-label="Last page">
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setPage(totalPages)} disabled={page === totalPages} aria-label="Last page">
           Last »
         </button>
       </div>

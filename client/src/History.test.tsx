@@ -38,9 +38,9 @@ describe("History component", () => {
     // rows should be present
     sampleTodos.forEach((t) => expect(screen.getByText(t.title)).toBeInTheDocument())
 
-    // click sort header (Title asc)
-    const titleAscButton = screen.getByRole('button', { name: /Title\s*↑/i })
-    await userEvent.click(titleAscButton)
+    // click sort header (toggle Title sort -> should request title_asc first click)
+    const titleButton = screen.getByRole('button', { name: /Sort by Title/i })
+    await userEvent.click(titleButton)
 
     // ensure getTodos was called again with updated sort param
     await waitFor(() => {
